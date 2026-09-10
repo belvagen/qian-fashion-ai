@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QIAN Fashion AI</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --primary: #6C5CE7;
+            --primary-dark: #5B4CDB;
+            --bg: var(--tg-theme-bg-color, #ffffff);
+            --text: var(--tg-theme-text-color, #000000);
+            --hint: var(--tg-theme-hint-color, #999999);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 16px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6C5CE7, #A29BFE);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .logo p {
+            color: var(--hint);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--hint);
+            border-radius: 16px;
+            padding: 48px 24px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(108, 92, 231, 0.05);
+        }
+        
+        .upload-area:active {
+            transform: scale(0.98);
+        }
+        
+        .upload-area.has-image {
+            border-style: solid;
+            border-color: var(--primary);
+            padding: 16px;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        
+        .upload-text {
+            color: var(--hint);
+            font-size: 15px;
+        }
+        
+        #preview {
+            max-width: 100%;
+            max-height: 250px;
+            display: none;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 24px 0 12px;
+        }
+        
+        .gender-selector {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .gender-btn {
+            flex: 1;
+            padding: 16px;
+            border: 2px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .gender-btn:active {
+            transform: scale(0.97);
+        }
+        
+        .gender-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        #generateBtn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #6C5CE7, #A29BFE);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 24px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+        }
+        
+        #generateBtn:disabled {
+            opacity: 0.5;
+            box-shadow: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 24px 0;
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(108, 92, 231, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        #result {
+            margin-top: 24px;
+            text-align: center;
+        }
+        
+        #resultImage {
+            max-width: 100%;
+            border-radius: 16px;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>QIAN Fashion AI</h1>
+            <p>Создайте фотосессию из фото одежды</p>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">Нажмите, чтобы загрузить фото одежды</div>
+            <input type="file" id="fileInput" accept="image/*" hidden>
+            <img id="preview" alt="Preview">
+        </div>
+
+        <div class="section-title">Выберите пол модели:</div>
+        <div class="gender-selector">
+            <button class="gender-btn" data-gender="male">👨 Мужской</button>
+            <button class="gender-btn" data-gender="female">👩 Женский</button>
+        </div>
+
+        <button id="generateBtn" disabled>✨ Создать фотосессию</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Генерация... Это может занять до 30 секунд</p>
+        </div>
+
+        <div id="result">
+            <img id="resultImage" alt="Result">
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
