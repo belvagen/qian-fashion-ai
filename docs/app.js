@@ -14,7 +14,7 @@ if (tg) {
 // ============================================
 // ВАЖНО: этот URL мы заменим на Шаге 15,
 // когда задеплоим Cloudflare Worker.
-const API_URL = 'https://qian-fashion-api.YOUR_SUBDOMAIN.workers.dev';
+const API_URL = 'https://qian-fashion-api.belvagen.workers.dev';
 
 // ============================================
 // СОСТОЯНИЕ ПРИЛОЖЕНИЯ
