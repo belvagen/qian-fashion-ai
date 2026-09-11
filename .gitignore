@@ -1,5 +1,9 @@
-# Тестовые файлы
+# Тестовые файлы (не коммитить)
 body.json
+test-body.json
+cloth.jpg
+*.test.jpg
+*.test.png
 
 # Wrangler cache
 .wrangler/
