@@ -1,6 +1,10 @@
 name = "qian-fashion-api"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 [ai]
 binding = "AI"
+
+[vars]
+IDM_VTON_SPACE = "yisol/IDM-VTON"

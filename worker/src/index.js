@@ -1,6 +1,6 @@
 // ============================================
-// QIAN Fashion AI — Cloudflare Worker v5 (debug)
-// Добавлен endpoint /debug-human для отладки
+// QIAN Fashion AI — Cloudflare Worker v7
+// Подробное логирование + fn_index=2, trigger_id=25
 // ============================================
 
 export default {
@@ -11,6 +11,10 @@ export default {
             'Access-Control-Allow-Headers': 'Content-Type',
         };
 
+        console.log('=== ВХОДЯЩИЙ ЗАПРОС ===');
+        console.log('Method:', request.method);
+        console.log('URL:', request.url);
+
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: corsHeaders });
         }
@@ -18,9 +22,7 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname;
 
-        // ============================================
-        // ОТЛАДОЧНЫЙ ENDPOINT: /debug-human
-        // ============================================
+        // Отладочный endpoint
         if (path === '/debug-human') {
             try {
                 const gender = url.searchParams.get('gender') || 'female';
@@ -37,41 +39,60 @@ export default {
             }
         }
 
-        // ============================================
-        // ОСНОВНОЙ ENDPOINT: /generate
-        // ============================================
         if (request.method !== 'POST') {
             return jsonError('Method not allowed', 405, corsHeaders);
         }
 
+        // Парсим body с логированием
+        let payload;
         try {
-            const payload = await request.json();
-            const { clothImage, mode, personImage, gender } = payload;
+            console.log('Читаю body...');
+            const rawBody = await request.text();
+            console.log('Размер body:', rawBody.length, 'символов');
+
+            payload = JSON.parse(rawBody);
+            console.log('Поля payload:', Object.keys(payload).join(', '));
+            console.log('mode:', payload.mode);
+            console.log('gender:', payload.gender);
+            console.log('clothImage длина:', payload.clothImage ? payload.clothImage.length : 'НЕТ');
+            console.log('personImage длина:', payload.personImage ? payload.personImage.length : 'НЕТ');
+        } catch (e) {
+            console.error('Ошибка парсинга JSON:', e.message);
+            return jsonError('Некорректный JSON: ' + e.message, 400, corsHeaders);
+        }
+
+        try {
+            const { clothImage, mode, personImage, gender, garmentDesc } = payload;
 
             if (!clothImage || !mode) {
+                console.log('Валидация: не хватает clothImage или mode');
                 return jsonError('Не переданы обязательные параметры: clothImage, mode', 400, corsHeaders);
             }
 
             let humanImage;
             if (mode === 'upload') {
                 if (!personImage) {
+                    console.log('Валидация: mode=upload, но personImage нет');
                     return jsonError('Не передано фото человека', 400, corsHeaders);
                 }
                 humanImage = personImage;
                 console.log('Режим: загрузка своего фото');
             } else if (mode === 'generate') {
                 if (!gender || (gender !== 'male' && gender !== 'female')) {
+                    console.log('Валидация: mode=generate, но gender неверный:', gender);
                     return jsonError('gender должен быть "male" или "female"', 400, corsHeaders);
                 }
                 console.log('Режим: генерация модели через Flux, пол:', gender);
                 humanImage = await generateHuman(env, gender);
                 console.log('Модель сгенерирована');
             } else {
+                console.log('Валидация: mode не распознан:', mode);
                 return jsonError('mode должен быть "upload" или "generate"', 400, corsHeaders);
             }
 
-            console.log('Вызов IDM-VTON...');
-            const resultImage = await callIDMVTON(env, humanImage, clothImage);
+            const description = garmentDesc || 'stylish fashion clothing item';
+            console.log('Вызов IDM-VTON, описание:', description);
+            const resultImage = await callIDMVTON(env, humanImage, clothImage, description);
             console.log('IDM-VTON вернул результат, размер base64:', resultImage.length);
 
             return new Response(
@@ -114,7 +135,7 @@ async function generateHuman(env, gender) {
 // ============================================
 // Вызов IDM-VTON
 // ============================================
-async function callIDMVTON(env, humanImageDataUrl, clothImageDataUrl) {
+async function callIDMVTON(env, humanImageDataUrl, clothImageDataUrl, garmentDescription) {
     const hfToken = env.HF_TOKEN;
     if (!hfToken) throw new Error('HF_TOKEN не настроен');
 
@@ -126,14 +147,14 @@ async function callIDMVTON(env, humanImageDataUrl, clothImageDataUrl) {
 
     const editorData = {
         background: humanFile,
-        layers: [],
+        layers: [humanFile],
         composite: null
     };
 
     const data = [
         editorData,
         clothFile,
-        'fashion clothing item',
+        garmentDescription,
         true,
         false,
         30,
@@ -203,8 +224,8 @@ async function gradioPredict(baseUrl, hfToken, apiName, data) {
         body: JSON.stringify({
             data: data,
             event_data: null,
-            fn_index: 0,
-            trigger_id: 22,
+            fn_index: 2,
+            trigger_id: 25,
             session_hash: sessionHash,
             api_name: apiName
         })

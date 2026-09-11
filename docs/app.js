@@ -1,81 +1,135 @@
 // ============================================
-// QIAN Fashion AI — логика Mini App
+// QIAN Fashion AI — логика Mini App (v2)
+// Поддерживает: upload своего фото / generate модели
 // ============================================
 
-// Инициализация Telegram WebApp
 const tg = window.Telegram?.WebApp;
 if (tg) {
     tg.ready();
     tg.expand();
 }
 
-// ============================================
-// КОНФИГУРАЦИЯ
-// ============================================
-// ВАЖНО: этот URL мы заменим на Шаге 15,
-// когда задеплоим Cloudflare Worker.
 const API_URL = 'https://qian-fashion-api.belvagen.workers.dev';
 
 // ============================================
-// СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+// СОСТОЯНИЕ
 // ============================================
-let uploadedImage = null;    // base64 загруженного фото
-let selectedGender = null;   // 'male' или 'female'
-let generatedImage = null;   // base64 сгенерированного фото
+let clothImage = null;
+let personImage = null;
+let sourceMode = 'upload';    // 'upload' или 'generate'
+let selectedGender = null;
 
 // ============================================
 // ЭЛЕМЕНТЫ DOM
 // ============================================
-const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
+const clothUploadArea = document.getElementById('clothUploadArea');
+const clothFileInput = document.getElementById('clothFileInput');
+const clothPreview = document.getElementById('clothPreview');
+
+const personUploadArea = document.getElementById('personUploadArea');
+const personFileInput = document.getElementById('personFileInput');
+const personPreview = document.getElementById('personPreview');
+
+const sourceBtns = document.querySelectorAll('.source-btn');
+const genderBlock = document.getElementById('genderBlock');
+const genderBtns = document.querySelectorAll('.gender-btn');
+
 const generateBtn = document.getElementById('generateBtn');
 const loading = document.getElementById('loading');
 const resultImage = document.getElementById('resultImage');
-const genderBtns = document.querySelectorAll('.gender-btn');
+
+// ============================================
+// УТИЛИТА: обработка загрузки файла
+// ============================================
+function handleFileUpload(fileInput, previewEl, areaEl, callback) {
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Файл слишком большой. Максимум 10 МБ.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('Пожалуйста, загрузите изображение.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            previewEl.src = event.target.result;
+            previewEl.style.display = 'block';
+            areaEl.classList.add('has-image');
+
+            const icon = areaEl.querySelector('.upload-icon');
+            const text = areaEl.querySelector('.upload-text');
+            if (icon) icon.style.display = 'none';
+            if (text) text.style.display = 'none';
+
+            callback(event.target.result);
+            checkFormReady();
+            if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
 // ============================================
 // ЗАГРУЗКА ФОТО ОДЕЖДЫ
 // ============================================
-uploadArea.addEventListener('click', () => fileInput.click());
+clothUploadArea.addEventListener('click', () => clothFileInput.click());
+handleFileUpload(
+    clothFileInput,
+    clothPreview,
+    clothUploadArea,
+    (base64) => { clothImage = base64; }
+);
 
-fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+// ============================================
+// ЗАГРУЗКА ФОТО ЧЕЛОВЕКА
+// ============================================
+personUploadArea.addEventListener('click', () => personFileInput.click());
+handleFileUpload(
+    personFileInput,
+    personPreview,
+    personUploadArea,
+    (base64) => { personImage = base64; }
+);
 
-    // Проверка размера файла (не больше 10 МБ)
-    if (file.size > 10 * 1024 * 1024) {
-        alert('Файл слишком большой. Максимум 10 МБ.');
-        return;
-    }
+// ============================================
+// ПЕРЕКЛЮЧАТЕЛЬ ИСТОЧНИКА (upload / generate)
+// ============================================
+sourceBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        sourceBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        sourceMode = btn.dataset.source;
 
-    // Проверка типа файла
-    if (!file.type.startsWith('image/')) {
-        alert('Пожалуйста, загрузите изображение.');
-        return;
-    }
+        if (sourceMode === 'upload') {
+            personUploadArea.style.display = 'block';
+            genderBlock.style.display = 'none';
+            selectedGender = null;
+            genderBtns.forEach(b => b.classList.remove('active'));
+        } else {
+            personUploadArea.style.display = 'none';
+            genderBlock.style.display = 'block';
+            personImage = null;
+            personFileInput.value = '';
+            personPreview.style.display = 'none';
+            personUploadArea.classList.remove('has-image');
+            const icon = personUploadArea.querySelector('.upload-icon');
+            const text = personUploadArea.querySelector('.upload-text');
+            if (icon) icon.style.display = 'block';
+            if (text) text.style.display = 'block';
+        }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        uploadedImage = event.target.result;
-        preview.src = uploadedImage;
-        preview.style.display = 'block';
-        uploadArea.classList.add('has-image');
-        
-        // Скрыть иконку и текст после загрузки
-        const icon = document.querySelector('.upload-icon');
-        const text = document.querySelector('.upload-text');
-        if (icon) icon.style.display = 'none';
-        if (text) text.style.display = 'none';
-        
         checkFormReady();
         if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
-    };
-    reader.readAsDataURL(file);
+    });
 });
 
 // ============================================
-// ВЫБОР ПОЛА МОДЕЛИ
+// ВЫБОР ПОЛА
 // ============================================
 genderBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -88,34 +142,49 @@ genderBtns.forEach(btn => {
 });
 
 // ============================================
-// ПРОВЕРКА ГОТОВНОСТИ ФОРМЫ
+// ПРОВЕРКА ГОТОВНОСТИ
 // ============================================
 function checkFormReady() {
-    generateBtn.disabled = !(uploadedImage && selectedGender);
+    if (!clothImage) {
+        generateBtn.disabled = true;
+        return;
+    }
+    if (sourceMode === 'upload') {
+        generateBtn.disabled = !personImage;
+    } else {
+        generateBtn.disabled = !selectedGender;
+    }
 }
 
 // ============================================
-// ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЯ
+// ГЕНЕРАЦИЯ
 // ============================================
 generateBtn.addEventListener('click', async () => {
-    if (!uploadedImage || !selectedGender) return;
+    if (!clothImage) return;
 
-    // Показать лоадер, скрыть прошлый результат
     loading.style.display = 'block';
     resultImage.style.display = 'none';
     generateBtn.disabled = true;
     if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
+    const payload = {
+        clothImage: clothImage,
+        mode: sourceMode
+    };
+
+    if (sourceMode === 'upload') {
+        payload.personImage = personImage;
+    } else {
+        payload.gender = selectedGender;
+    }
+
+    console.log('Отправка payload, поля:', Object.keys(payload).join(', '));
+
     try {
         const response = await fetch(`${API_URL}/generate`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                image: uploadedImage,
-                gender: selectedGender
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
@@ -125,8 +194,7 @@ generateBtn.addEventListener('click', async () => {
         const data = await response.json();
 
         if (data.success) {
-            generatedImage = data.imageUrl;
-            resultImage.src = generatedImage;
+            resultImage.src = data.imageUrl;
             resultImage.style.display = 'block';
             if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         } else {
@@ -143,8 +211,5 @@ generateBtn.addEventListener('click', async () => {
     }
 });
 
-// ============================================
-// ЛОГ ДЛЯ ОТЛАДКИ
-// ============================================
 console.log('QIAN Fashion AI: приложение загружено');
 console.log('API_URL:', API_URL);

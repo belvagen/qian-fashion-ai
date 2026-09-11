@@ -56,9 +56,9 @@
         .upload-area {
             border: 2px dashed var(--hint);
             border-radius: 16px;
-            padding: 48px 24px;
+            padding: 32px 20px;
             text-align: center;
-            margin: 20px 0;
+            margin: 12px 0;
             cursor: pointer;
             transition: all 0.3s ease;
             background: rgba(108, 92, 231, 0.05);
@@ -71,32 +71,55 @@
         .upload-area.has-image {
             border-style: solid;
             border-color: var(--primary);
-            padding: 16px;
+            padding: 12px;
         }
         
         .upload-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
+            font-size: 40px;
+            margin-bottom: 8px;
         }
         
         .upload-text {
             color: var(--hint);
-            font-size: 15px;
+            font-size: 14px;
         }
         
-        #preview {
+        .upload-area img {
             max-width: 100%;
-            max-height: 250px;
+            max-height: 200px;
             display: none;
             margin: 0 auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 10px;
         }
         
         .section-title {
             font-size: 15px;
             font-weight: 600;
-            margin: 24px 0 12px;
+            margin: 20px 0 10px;
+        }
+        
+        .source-selector {
+            display: flex;
+            gap: 10px;
+            margin: 12px 0 16px;
+        }
+        
+        .source-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .source-btn.active {
+            background: var(--primary);
+            color: white;
         }
         
         .gender-selector {
@@ -106,19 +129,15 @@
         
         .gender-btn {
             flex: 1;
-            padding: 16px;
+            padding: 14px;
             border: 2px solid var(--primary);
             background: transparent;
             color: var(--primary);
             border-radius: 12px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-        }
-        
-        .gender-btn:active {
-            transform: scale(0.97);
         }
         
         .gender-btn.active {
@@ -186,24 +205,44 @@
             <p>Создайте фотосессию из фото одежды</p>
         </div>
         
-        <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📷</div>
+        <!-- Шаг 1: Фото одежды -->
+        <div class="section-title">Фото одежды:</div>
+        <div class="upload-area" id="clothUploadArea">
+            <div class="upload-icon">👕</div>
             <div class="upload-text">Нажмите, чтобы загрузить фото одежды</div>
-            <input type="file" id="fileInput" accept="image/*" hidden>
-            <img id="preview" alt="Preview">
+            <input type="file" id="clothFileInput" accept="image/*" hidden>
+            <img id="clothPreview" alt="Cloth preview">
         </div>
 
-        <div class="section-title">Выберите пол модели:</div>
-        <div class="gender-selector">
-            <button class="gender-btn" data-gender="male">👨 Мужской</button>
-            <button class="gender-btn" data-gender="female">👩 Женский</button>
+        <!-- Шаг 2: Фото человека -->
+        <div class="section-title">Фото человека:</div>
+        <div class="source-selector">
+            <button class="source-btn active" data-source="upload">📸 Загрузить своё</button>
+            <button class="source-btn" data-source="generate">✨ Сгенерировать</button>
+        </div>
+
+        <!-- Блок загрузки фото человека -->
+        <div class="upload-area" id="personUploadArea" style="display: block;">
+            <div class="upload-icon">👤</div>
+            <div class="upload-text">Нажмите, чтобы загрузить своё фото</div>
+            <input type="file" id="personFileInput" accept="image/*" hidden>
+            <img id="personPreview" alt="Person preview">
+        </div>
+
+        <!-- Блок выбора пола -->
+        <div id="genderBlock" style="display: none;">
+            <div class="section-title">Выберите пол модели:</div>
+            <div class="gender-selector">
+                <button class="gender-btn" data-gender="male">👨 Мужской</button>
+                <button class="gender-btn" data-gender="female">👩 Женский</button>
+            </div>
         </div>
 
         <button id="generateBtn" disabled>✨ Создать фотосессию</button>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Генерация... Это может занять до 30 секунд</p>
+            <p>Генерация... Это может занять до 90 секунд</p>
         </div>
 
         <div id="result">
